@@ -21,27 +21,24 @@ const csvWriter = createCsvWriter({
     mode: '0744'
 });
 const lib = require("./lib");
-let items = lib.getPriceItem();
-(async function main(){     
-        let data = lib.getScrabData('https://www.ecostyle.pp.ua/door-furniture/mbm/ruchki-na-rozetke');
-        data.then(function(value) {
-            let pages = +value.pages;
-            let links = value.hrefs;
+console.log(lib.getPriceItem());
+/*(async function main(){
+        let data = await lib.getScrabData('https://www.ecostyle.pp.ua/door-furniture/mbm/ruchki-na-rozetke');
+        let pages = +data.pages;
+        let links = data.hrefs;
+        let newLinks = [];
 
-            for (let value of lib.generateSequence('https://www.ecostyle.pp.ua/door-furniture/mbm/ruchki-na-rozetke', pages)) {
-              value.then(function(value) {
-                  return value[0] += value[0];
-                  }).then(function(value) {
-                  console.log(value);
-                  }).catch(function(e) {
-                    console.log(e);
-                });
+        for (let i=2; i<=pages; i++) {
+            let newData = await lib.getScrabData('https://www.ecostyle.pp.ua/door-furniture/mbm/ruchki-na-rozetke', i);
+            if (i === 2) {
+                newLinks = links.concat(newData.hrefs);
+            } else {
+                newLinks = newLinks.concat(newData.hrefs);
             }
+        }
+    console.log(newLinks);
 
-        }).catch(function(e) {
-          console.log(e);
-        });
-		/* lib.asyncForEach(items,
+		/!* lib.asyncForEach(items,
 		async function (element) {
 			try {
 				const browser = await puppeteer.launch();
@@ -87,5 +84,5 @@ let items = lib.getPriceItem();
 			} catch(e) {
 				console.log('Our errors', e);
 			}
-		}); */
-})();
+		}); *!/
+})();*/
