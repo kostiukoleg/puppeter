@@ -1,4 +1,6 @@
 const puppeteer = require("puppeteer");
+const MongoClient = require('mongodb').MongoClient;
+const url = "mongodb://127.0.0.1:27017";
 const createCsvWriter  = require('csv-writer').createObjectCsvWriter;
 const csvWriter = createCsvWriter({
     path: 'data.csv',
@@ -23,7 +25,7 @@ const csvWriter = createCsvWriter({
 const lib = require("./lib");
 //console.log(lib.getPriceItem());
 (async function main(){
-        let data = await lib.getScrabLinks('https://www.ecostyle.pp.ua/door-furniture/mbm/ruchki-na-rozetke');
+       /* let data = await lib.getScrabLinks('https://www.ecostyle.pp.ua/door-furniture/mbm/ruchki-na-rozetke');
         let pages = +data.pages;
         let links = data.hrefs;
         let newLinks = [];
@@ -36,22 +38,37 @@ const lib = require("./lib");
                 newLinks = newLinks.concat(newData.hrefs);
             }
         }
-
-        for (let i=0; i<5; i++) {//newLinks.length
-            let productData = await lib.getScrabProducts('https://www.ecostyle.pp.ua/door-furniture/mbm/ruchki-na-rozetke', i);
-            let writeData = {
-                'id': productData.id,
-                'title': productData.title,
-                'description': productData.description,
-                'price': productData.price,
-                'brand': productData.brand,
-                'condition': productData.condition,
-                'link': productData.link,
-                'availability': productData.availability,
-                'image_link': productData.image_link,
-                'end': '\n'
-            };
-            csvWriter.writeRecords([writeData]).then(()=> console.log('The CSV file was written successfully'));
-            writeData = {};
-        }
+        MongoClient.connect(url, {useUnifiedTopology: true}, function(err, db) {
+            if (err) throw err;
+            let dbo = db.db("mvmlinks");
+            let myobj = Object.assign({}, newLinks);
+            dbo.collection("customers").insertOne(myobj, function(err, res) {
+                if (err) throw err;
+                console.log("Document inserted");
+                db.close();
+            });
+        });*/
+        MongoClient.connect(url, {useUnifiedTopology: true}, async function(err, db) {
+            let dbo = db.db("mvmlinks");
+            dbo.collection("customers").findOne({}, async function(err, docs) {
+                for (let i = 0; i < 5; i++) {//Object.keys(docs).length-1
+                    let productData = await lib.getScrabProducts(docs[i]);
+                    let writeData = {
+                        'id': productData.id,
+                        'title': productData.title,
+                        'description': productData.description,
+                        'price': productData.price,
+                        'brand': productData.brand,
+                        'condition': productData.condition,
+                        'link': productData.link,
+                        'availability': productData.availability,
+                        'image_link': productData.image_link,
+                        'end': '\n'
+                    };
+                    csvWriter.writeRecords([writeData]).then(() => console.log('The CSV file '+i+' was written successfully'));
+                    writeData = {};
+                }
+            });
+            db.close();
+        });
 })();

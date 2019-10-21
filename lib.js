@@ -87,7 +87,7 @@ module.exports = {
         return {pages: allPages, hrefs: href};
     },
 
-    getScrabProducts: async function (link, index) {
+    getScrabProducts: async function (link) {
         const browser = await puppeteer.launch({ignoreHTTPSErrors: true});
         const page = await browser.newPage();
         await page.setRequestInterception(true);
@@ -97,31 +97,30 @@ module.exports = {
         await page.emulate(devices['iPhone 6']);
         await page.goto(link, {timeout: 0, waitUntil: "networkidle0"});
         await page.waitForSelector('div.product-code span.code');
-        try {
-            // let id = await page.$eval('div.product-code span.code', text => {
-            //     return text.innerText
-            // });
-            id = '';
-            let title = await page.$eval('div.bread-crumbs span.last-crumb', text => {
-                return text.innerText
-            });
-            // let description = await page.$eval('div.product-tabs-container', text => {
-            //     return text.innerHTML
-            // });
-            description = '';
-            let price = await page.$eval('div.normal-price span.price', text => {
-                return text.innerText + ' UAH'
-            });
-            let brand = 'MVM';
-            let condition = 'new';
-            let url = link;
-            let availability = 'in stock';
-            let image_link = await page.$eval('div.magnify img.mg-product-image', img => {
-                return img.src
-            });
-        } catch (e) {
-            console.log(e);
-        }
+        let id = await page.$eval('div.product-code span.code', (text) => {
+            console.log(text);
+            return text.innerText
+        });
+        let title = await page.$eval('div.bread-crumbs span.last-crumb', (text) => {
+            console.log(text);
+            return text.innerText
+        });
+        let description = await page.$eval('div.product-tabs-container div#tab1', (text) => {
+            console.log(text);
+            return text.innerHTML
+        });
+        let price = await page.$eval('div.normal-price span.price', (text) => {
+            console.log(text);
+            return text.innerText + ' UAH'
+        });
+        let brand = 'MVM';
+        let condition = 'new';
+        let url = link;
+        let availability = 'in stock';
+        let image_link = await page.$eval('div.magnify img.mg-product-image', (img) => {
+            console.log(img);
+            return img.src
+        });
         await browser.close();
         return {id: id, title: title, description: description, price: price, brand: brand, condition: condition, link: url, availability: availability, image_link: image_link};
     },

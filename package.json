@@ -20,6 +20,7 @@
     "cjs": "0.0.11",
     "csv-writer": "^1.5.0",
     "fs-extra": "^8.1.0",
+    "mongodb": "^3.3.3",
     "puppeteer": "^1.20.0",
     "request": "^2.88.0",
     "xlsx": "^0.15.1"
