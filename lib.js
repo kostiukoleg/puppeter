@@ -1,13 +1,36 @@
 const fs = require('fs');
 const request = require('request');
+const path = require('path');
+process.setMaxListeners(100);
 const xlsx = require('xlsx');
 const puppeteer = require('puppeteer');
 const devices = require('puppeteer/DeviceDescriptors');
 let wb = xlsx.readFile('./price/KedrAndrey.xlsx');
-
+const createCsvWriter  = require('csv-writer').createObjectCsvWriter;
+const csvWriter = createCsvWriter({
+    path: 'data.csv',
+    header: [
+        {id: 'id', title: 'id'},
+        {id: 'title', title: 'title'},
+        {id: 'description', title: 'description'},
+        {id: 'price', title: 'price'},
+        {id: 'brand', title: 'brand'},
+        {id: 'condition', title: 'condition'},
+        {id: 'link', title: 'link'},
+        {id: 'availability', title: 'availability'},
+        {id: 'image_link', title: 'image_link'},
+        {id: 'unit_pricing_measure', title: 'unit_pricing_measure'},
+        {id: 'end', title: '\n'}
+    ],
+    fieldDelimiter: ';',
+    encoding: 'utf8',
+    alwaysQuote: true,
+    flags: 'a',
+    mode: '0744'
+});
 module.exports = {
 
-    download: function (uri, filename, callback) {
+    download: async function (uri, filename, callback) {
         request.head(uri, function (err, res, body) {
             //console.log('content-type:', res.headers['content-type']);
             //console.log('content-length:', res.headers['content-length']);
@@ -96,33 +119,76 @@ module.exports = {
         });
         await page.emulate(devices['iPhone 6']);
         await page.goto(link, {timeout: 0, waitUntil: "networkidle0"});
-        await page.waitForSelector('div.product-code span.code');
-        let id = await page.$eval('div.product-code span.code', (text) => {
-            console.log(text);
-            return text.innerText
-        });
-        let title = await page.$eval('div.bread-crumbs span.last-crumb', (text) => {
-            console.log(text);
-            return text.innerText
-        });
-        let description = await page.$eval('div.product-tabs-container div#tab1', (text) => {
-            console.log(text);
-            return text.innerHTML
-        });
-        let price = await page.$eval('div.normal-price span.price', (text) => {
-            console.log(text);
-            return text.innerText + ' UAH'
-        });
-        let brand = 'MVM';
-        let condition = 'new';
-        let url = link;
-        let availability = 'in stock';
-        let image_link = await page.$eval('div.magnify img.mg-product-image', (img) => {
-            console.log(img);
-            return img.src
-        });
+        try {
+            await page.waitForSelector('div.product-code span.code');
+            let id = await page.$eval('div.product-code span.code', (text) => {
+                console.log(text);
+                return text.innerText
+            });
+            await page.waitForSelector('div.bread-crumbs span.last-crumb');
+            let title = await page.$eval('div.bread-crumbs span.last-crumb', (text) => {
+                console.log(text);
+                return text.innerText
+            });
+            await page.waitForSelector('div.product-tabs-container div#tab1');
+            let description = await page.$eval('div.product-tabs-container div#tab1', (text) => {
+                console.log(text);
+                return text.innerHTML
+            });
+            await page.waitForSelector('div.normal-price span.price');
+            let price = await page.$eval('div.normal-price span.price', (text) => {
+                console.log(text);
+                return `${text.innerText} UAH`
+            });
+            let brand = 'MVM';
+            let condition = 'new';
+            let url = link;
+            let availability = 'in stock';
+            let image_link = await page.$eval('div.magnify img.mg-product-image', (img) => {
+                console.log(img);
+                return img.src
+            });
+            let unit_pricing_measure = 'ct';
+            //console.log();
+            return csvWriter.writeRecords([{
+                'id': id,
+                'title': title,
+                'description': description.replace(/&nbsp;/g, " ").replace(/\<p\>\s{2,}/g, "<p>").replace(/\<p\>\s{1}\<\/p\>/g, ""),
+                'price': price,
+                'brand': brand,
+                'condition': condition,
+                'link': url,
+                'availability': availability,
+                'image_link': image_link,
+                'unit_pricing_measure': unit_pricing_measure,
+                'end': '\n'
+            }]);
+        } catch (e) {
+            console.error(e);
+        }
         await browser.close();
-        return {id: id, title: title, description: description, price: price, brand: brand, condition: condition, link: url, availability: availability, image_link: image_link};
+    },
+
+    getScrabProductIMG: async function (link) {
+        const browser = await puppeteer.launch({ignoreHTTPSErrors: true});
+        const page = await browser.newPage();
+        await page.setRequestInterception(true);
+        page.on("request", request => {
+            request.continue();
+        });
+        await page.emulate(devices['iPhone 6']);
+        await page.goto(link, {timeout: 0, waitUntil: "networkidle0"});
+        try {
+            await page.waitForSelector('div.productBody div.img_box a img');
+            let img = await page.$eval('div.productBody div.img_box a img', (img) => {
+                console.log(img);
+                return img.src
+            });
+            return img;
+        } catch (e) {
+            console.error(e);
+        }
+        await browser.close();
     },
 
     generateSequence: function* (link, end) {
@@ -138,9 +204,111 @@ module.exports = {
         }
     },
 
+    getData: async function (arr) {
+        return await Promise.all(arr.map(item => this.getScrabProducts(item)));
+    },
+
     asyncForEach: async function (array, callback) {
         for (let index = 0; index < array.length; index++) {
             await callback(array[index], index, array);
+            console.log(index);
+        }
+    },
+
+    asyncForEachAll: async function (array, callback) {
+        let index = 0;
+        while (index < array.length) {
+            let newArr = array.slice(index, index + 10);
+            await Promise.all(newArr.map(item => callback(item))).catch(function (err) {
+                console.log('A promise failed to resolve', err);
+            });
+            console.log(index);
+            index += 10;
+            await this.sleep(3000);
+        }
+    },
+
+    getMVMcolor: function (str) {
+        switch (str) {
+            case ' MAB':
+                return ' матова антична бронза';
+                break;
+            case ' SN':
+                return ' матовий никель';
+                break;
+            case ' AB':
+                return ' стара бронза';
+                break;
+            case ' PB':
+                return ' полированная латунь';
+                break;
+            case ' SB':
+                return ' матовая латунь';
+                break;
+            case ' SN':
+                return ' матовий никель';
+                break;
+            case ' CP':
+                return ' полированний хром';
+                break;
+            case ' MC':
+                return ' матовий хром';
+                break;
+            case ' MACC':
+                return ' матовая бронза';
+                break;
+            case ' MN':
+                return ' матовий никель';
+                break;
+            case ' BN/SBN':
+                return ' чорний никель/матовий чорний никель';
+                break;
+            case ' PB/SB':
+                return ' полированая латунь/матовая латунь';
+                break;
+            case ' SN/CP':
+                return ' матовий никель/полирований хром';
+                break;
+            case ' Black/CP':
+                return ' чёрный/полированный хром';
+                break;
+            case ' PCF':
+                return ' полирована бронза';
+            case ' SS':
+                return ' нержавеющая сталь';
+                break;
+            case ' W':
+                return ' белый';
+                break;
+            case ' S':
+                return ' серебрянный';
+                break;
+            case ' B':
+                return ' коричневий';
+                break;
+            default:
+                return "Нет таких значений";
+        }
+    },
+
+    sleep: async function (ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    },
+
+    clearDir: function (directory = 0, file = 0) {
+        if (file != 0 && fs.existsSync(file)) {
+            fs.unlink(file, err => {
+                if (err) throw err;
+            });
+        } else if(directory != 0) {
+            fs.readdir(directory, (err, files) => {
+                if (err) throw err;
+                for (const file of files) {
+                    fs.unlink(path.join(directory, file), err => {
+                        if (err) throw err;
+                    });
+                }
+            });
         }
     }
 }

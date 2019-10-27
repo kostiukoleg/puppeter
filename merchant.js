@@ -51,18 +51,20 @@ const lib = require("./lib");
         MongoClient.connect(url, {useUnifiedTopology: true}, async function(err, db) {
             let dbo = db.db("mvmlinks");
             dbo.collection("customers").findOne({}, async function(err, docs) {
-                for (let i = 0; i < 5; i++) {//Object.keys(docs).length-1
+                for (let i = 0; i < Object.keys(docs).length-1; i++) {//Object.keys(docs).length-1
                     let productData = await lib.getScrabProducts(docs[i]);
+                    let imgProduct = await lib.getScrabProductIMG(`https://www.zamochniki.com.ua/search-engine.htm?slovo=${encodeURI(productData.title)}&search_submit=&hledatjak=2`);
+                    let color = productData.title.match(/\s{1}\S+/gi);
                     let writeData = {
                         'id': productData.id,
-                        'title': productData.title,
+                        'title': 'Ручка МВМ ' + productData.title + lib.getMVMcolor(color[0]),
                         'description': productData.description,
                         'price': productData.price,
                         'brand': productData.brand,
                         'condition': productData.condition,
                         'link': productData.link,
                         'availability': productData.availability,
-                        'image_link': productData.image_link,
+                        'image_link': imgProduct,
                         'end': '\n'
                     };
                     csvWriter.writeRecords([writeData]).then(() => console.log('The CSV file '+i+' was written successfully'));
