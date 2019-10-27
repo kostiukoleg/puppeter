@@ -62,10 +62,20 @@ const asyncGrubber = async function (element) {
         await page.goto(href);
         await page.waitForSelector('span.iconedText__root--3jNtn span b');
         await page.evaluate(() => {
-            [...document.querySelectorAll('span.iconedText__root--3jNtn span b')].find(element => element.textContent === 'Всі характеристики').click();
+            if([...document.querySelectorAll('span.iconedText__root--3jNtn span b')].find(element => element.textContent === 'Всі характеристики')){
+                [...document.querySelectorAll('span.iconedText__root--3jNtn span b')].find(element => element.textContent === 'Всі характеристики').click();
+                console.log("Button 1");
+            } else {
+                console.log("Button 1 Not Found");
+            }
         });
         await page.evaluate(() => {
-            [...document.querySelectorAll('span.iconedText__root--3jNtn span b')].find(element => element.textContent === 'Весь опис').click();
+            if([...document.querySelectorAll('span.iconedText__root--3jNtn span b')].find(element => element.textContent === 'Весь опис')){
+                [...document.querySelectorAll('span.iconedText__root--3jNtn span b')].find(element => element.textContent === 'Весь опис').click();
+                console.log("Button 2");
+            } else {
+                console.log("Button 2 Not Found");
+            }
         });
         let property = await page.$eval('div.productExtra__root--3cHd8 div.productExtra__section--37buY ul.productAttributes__list--3D4yd', el => el.innerHTML);
         let description = await page.$eval('div.customContent__root--1kf9S div', el => el.innerHTML);
