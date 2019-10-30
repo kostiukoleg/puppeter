@@ -100,12 +100,18 @@ module.exports = {
             } else {
                 await page.goto(link + '?page=' + index, {timeout: 0, waitUntil: "networkidle0"});
             }
-            await page.waitForSelector('div.product-wrapper div.product-name a');
+            await page.waitForSelector('div.product-wrapper div.product-name a').catch((e)=>{
+                console.log(e);
+            });
             let allPages = await page.$eval('div.mg-pager div.allPages span', text => {
                 return text.innerText
+            }).catch((e)=>{
+                console.log(e);
             });
             let href = await page.$$eval('div.product-wrapper div.product-name a', href => {
                 return href.map(item => item.href)
+            }).catch((e)=>{
+                console.log(e);
             });
             await browser.close();
             return {pages: allPages, hrefs: href};

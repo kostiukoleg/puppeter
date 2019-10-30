@@ -51,16 +51,32 @@ const asyncGrubber = async function (element) {
             request.continue();
         });
         await page.emulate(devices['iPad Pro']);
-        await page.goto('https://prom.ua/ua/search?search_term=' + encodeURI(element.name));
-        await page.waitForSelector('div.productTile__content--2UlvD a.productTile__tileLink--204An');
-        let href = await page.$eval('div.productTile__content--2UlvD a.productTile__tileLink--204An', el => el.href);
-        await page.waitForSelector('div.productTile__content--2UlvD div.productTile__imageHolder--3BuD9 img');
-        let imgSrc = await page.$eval('div.productTile__content--2UlvD div.productTile__imageHolder--3BuD9 img', el => el.src);
+        await page.goto('https://prom.ua/ua/search?search_term=' + encodeURI(element.name)).catch((e)=>{
+                console.log(e);
+            });
+        await page.waitForSelector('div.productTile__content--2UlvD a.productTile__tileLink--204An').catch((e)=>{
+                console.log(e);
+            });
+        let href = await page.$eval('div.productTile__content--2UlvD a.productTile__tileLink--204An', el => el.href).catch((e)=>{
+                console.log(e);
+            });
+        await page.waitForSelector('div.productTile__content--2UlvD div.productTile__imageHolder--3BuD9 img').catch((e)=>{
+                console.log(e);
+            });
+        let imgSrc = await page.$eval('div.productTile__content--2UlvD div.productTile__imageHolder--3BuD9 img', el => el.src).catch((e)=>{
+                console.log(e);
+            });
         await lib.download(imgSrc.replace(/_w200_h200/ig, ''), "img/"+imgSrc.replace(/_w200_h200/ig, '').match(/[a-zA-z%\-0-9]+.{1}[jpgJPGpngPNGgifGIF]{3}/)[0].replace( /%20\+/g, "_" ), function(){
             element['img'] = imgSrc.replace(/_w200_h200/ig, '').match(/[a-zA-z%\-0-9]+.{1}[jpgJPGpngPNGgifGIF]{3}/)[0].replace( /%20\+/g, "_" );
-        });
-        await page.goto(href);
-        await page.waitForSelector('span.iconedText__root--3jNtn span b');
+        }).catch((e)=>{
+                console.log(e);
+            });
+        await page.goto(href).catch((e)=>{
+                console.log(e);
+            });
+        await page.waitForSelector('span.iconedText__root--3jNtn span b').catch((e)=>{
+                console.log(e);
+            });
         await page.evaluate(() => {
             if([...document.querySelectorAll('span.iconedText__root--3jNtn span b')].find(element => element.textContent === 'Всі характеристики')){
                 [...document.querySelectorAll('span.iconedText__root--3jNtn span b')].find(element => element.textContent === 'Всі характеристики').click();
@@ -68,7 +84,9 @@ const asyncGrubber = async function (element) {
             } else {
                 console.log("Button 1 Not Found");
             }
-        });
+        }).catch((e)=>{
+                console.log(e);
+            });
         await page.evaluate(() => {
             if([...document.querySelectorAll('span.iconedText__root--3jNtn span b')].find(element => element.textContent === 'Весь опис')){
                 [...document.querySelectorAll('span.iconedText__root--3jNtn span b')].find(element => element.textContent === 'Весь опис').click();
@@ -76,9 +94,15 @@ const asyncGrubber = async function (element) {
             } else {
                 console.log("Button 2 Not Found");
             }
-        });
-        let property = await page.$eval('div.productExtra__root--3cHd8 div.productExtra__section--37buY ul.productAttributes__list--3D4yd', el => el.innerHTML);
-        let description = await page.$eval('div.customContent__root--1kf9S div', el => el.innerHTML);
+        }).catch((e)=>{
+                console.log(e);
+            });
+        let property = await page.$eval('div.productExtra__root--3cHd8 div.productExtra__section--37buY ul.productAttributes__list--3D4yd', el => el.innerHTML).catch((e)=>{
+                console.log(e);
+            });
+        let description = await page.$eval('div.customContent__root--1kf9S div', el => el.innerHTML).catch((e)=>{
+                console.log(e);
+            });
         let data = {
             'cat': 'Дверная фурнитура/Кедр/' +element.category.replace( /[“”]/g, "" ),
             'url_cat': 'door-furniture/kedr/'+lib.rusToLatin(element.category.replace( /[“”]/g, "" )),
@@ -106,7 +130,9 @@ const asyncGrubber = async function (element) {
             'property': null,
             'end': '\n'
         };
-        csvWriter.writeRecords([data]).then(()=> console.log('The CSV file was written successfully'));
+        csvWriter.writeRecords([data]).then(()=> console.log('The CSV file was written successfully')).catch((e)=>{
+                console.log(e);
+            });
         await browser.close();
     } catch (e) {
         console.log(e);
