@@ -1,11 +1,10 @@
 const fs = require('fs');
 const request = require('request');
 const path = require('path');
-process.setMaxListeners(100);
 const xlsx = require('xlsx');
 const puppeteer = require('puppeteer');
 const devices = require('puppeteer/DeviceDescriptors');
-let wb = xlsx.readFile('./price/KedrAndrey.xlsx');
+let wb = xlsx.readFile('price/KedrAndrey.xlsx');
 const createCsvWriter  = require('csv-writer').createObjectCsvWriter;
 const csvWriter = createCsvWriter({
     path: 'data.csv',
@@ -31,16 +30,17 @@ const csvWriter = createCsvWriter({
 module.exports = {
 
     download: async function (uri, filename, callback) {
-        request.head(uri, function (err, res, body) {
-            //console.log('content-type:', res.headers['content-type']);
-            //console.log('content-length:', res.headers['content-length']);
+        request.head(uri, function (err, res) {
+            if (err) console.log(err);
+            console.log('content-type:', res.headers['content-type']);
+            console.log('content-length:', res.headers['content-length']);
             return request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
         });
     },
 
     rusToLatin: function (str) {
 
-        var ru = {
+        let ru = {
             'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd',
             'е': 'e', 'ё': 'e', 'ж': 'j', 'з': 'z', 'и': 'i',
             'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
@@ -52,7 +52,7 @@ module.exports = {
 
         str = str.replace(/[ъь]+/g, '').replace(/й/g, 'i');
 
-        for (var i = 0; i < str.length; ++i) {
+        for (let i = 0; i < str.length; ++i) {
             n_str.push(
                 ru[str[i]]
                 || ru[str[i].toLowerCase()] === undefined && str[i]
@@ -69,7 +69,7 @@ module.exports = {
         let dollar = 24.27 + (24.27 * 0.3),
             item = {},
             arr = [];
-        for (let variable in wb.Sheets['Sheet1']) {
+        for (variable in wb.Sheets['Sheet1']) {
             let num = variable.slice(1, variable.length);
             if (variable.slice(0, 1) === "C") {
                 if (wb.Sheets['Sheet1'][variable]['v'] === 0) {
@@ -87,72 +87,153 @@ module.exports = {
     },
 
     getScrabLinks: async function (link, index = 1) {
-        const browser = await puppeteer.launch({ignoreHTTPSErrors: true});
-        const page = await browser.newPage();
-        await page.setRequestInterception(true);
-        page.on("request", request => {
-            request.continue();
-        });
-        await page.emulate(devices['iPhone 6']);
-        if (index === 1) {
-            await page.goto(link, {timeout: 0, waitUntil: "networkidle0"});
-        } else {
-            await page.goto(link + '?page=' + index, {timeout: 0, waitUntil: "networkidle0"});
-        }
-        await page.waitForSelector('div.product-wrapper div.product-name a');
-        let allPages = await page.$eval('div.mg-pager div.allPages span', text => {
-            return text.innerText
-        });
-        let href = await page.$$eval('div.product-wrapper div.product-name a', href => {
-            return href.map(item => item.href)
-        });
-        await browser.close();
-        return {pages: allPages, hrefs: href};
-    },
-
-    getScrabProducts: async function (link) {
-        const browser = await puppeteer.launch({ignoreHTTPSErrors: true});
-        const page = await browser.newPage();
-        await page.setRequestInterception(true);
-        page.on("request", request => {
-            request.continue();
-        });
-        await page.emulate(devices['iPhone 6']);
-        await page.goto(link, {timeout: 0, waitUntil: "networkidle0"});
         try {
-            await page.waitForSelector('div.product-code span.code');
+            const browser = await puppeteer.launch({ignoreHTTPSErrors: true});
+            const page = await browser.newPage();
+            await page.setRequestInterception(true);
+            page.on("request", request => {
+                request.continue();
+            });
+            await page.emulate(devices['iPhone 6']);
+            if (index === 1) {
+                await page.goto(link, {timeout: 0, waitUntil: "networkidle0"});
+            } else {
+                await page.goto(link + '?page=' + index, {timeout: 0, waitUntil: "networkidle0"});
+            }
+            await page.waitForSelector('div.product-wrapper div.product-name a');
+            let allPages = await page.$eval('div.mg-pager div.allPages span', text => {
+                return text.innerText
+            });
+            let href = await page.$$eval('div.product-wrapper div.product-name a', href => {
+                return href.map(item => item.href)
+            });
+            await browser.close();
+            return {pages: allPages, hrefs: href};
+        } catch (e) {
+            console.log(e);
+        }
+    },
+    getScrabProducts: async (link) => {
+        try {
+            const browser = await puppeteer.launch({ignoreHTTPSErrors: true, headless: false});
+            const page = await browser.newPage();
+            await page.setRequestInterception(true);
+            page.on("request", request => {
+                request.continue();
+            });
+            await page.emulate(devices['iPhone 6']);
+            await page.goto(link, {timeout: 0, waitUntil: "networkidle0"});
+            await page.waitForSelector('div.product-code span.code').catch((e)=>{
+                console.log(e);
+            });
             let id = await page.$eval('div.product-code span.code', (text) => {
-                console.log(text);
                 return text.innerText
+            }).catch((e)=>{
+                console.log(e);
             });
-            await page.waitForSelector('div.bread-crumbs span.last-crumb');
+            await page.waitForSelector('div.bread-crumbs span.last-crumb').catch((e)=>{
+                console.log(e);
+            });
             let title = await page.$eval('div.bread-crumbs span.last-crumb', (text) => {
-                console.log(text);
                 return text.innerText
+            }).catch((e)=>{
+                console.log(e);
             });
-            await page.waitForSelector('div.product-tabs-container div#tab1');
+            await page.waitForSelector('div.product-tabs-container div#tab1').catch((e)=>{
+                console.log(e);
+            });
             let description = await page.$eval('div.product-tabs-container div#tab1', (text) => {
-                console.log(text);
                 return text.innerHTML
+            }).catch((e)=>{
+                console.log(e);
             });
-            await page.waitForSelector('div.normal-price span.price');
+            await page.waitForSelector('div.normal-price span.price').catch((e)=>{
+                console.log(e);
+            });
             let price = await page.$eval('div.normal-price span.price', (text) => {
-                console.log(text);
                 return `${text.innerText} UAH`
+            }).catch((e)=>{
+                console.log(e);
             });
             let brand = 'MVM';
             let condition = 'new';
             let url = link;
             let availability = 'in stock';
-            let image_link = await page.$eval('div.magnify img.mg-product-image', (img) => {
-                console.log(img);
-                return img.src
+            await page.goto("https://www.solo-dveri.ua/index.php?route=product/search&search="+encodeURI(title.replace("-", " ")), {timeout: 0, waitUntil: "networkidle0"});
+            await page.waitForSelector('div.image a img').catch((e)=>{
+               // console.log(e);
             });
+            let image_link = await page.$eval('div.image a img', (img) => {
+                return img.src
+            }).catch((e)=>{
+                //console.log(e);
+            });
+            if(!image_link){
+                image_link = '';
+            }
             let unit_pricing_measure = 'ct';
-            //console.log();
-            return csvWriter.writeRecords([{
+            let color = title.match(/\s{1}\S+/gi);
+            switch (color[0]) {
+                case ' MAB':
+                    color = ' матова антична бронза';
+                    break;
+                case ' SN':
+                    color = ' матовий никель';
+                    break;
+                case ' AB':
+                    color = ' стара бронза';
+                    break;
+                case ' PB':
+                    color = ' полированная латунь';
+                    break;
+                case ' SB':
+                    color = ' матовая латунь';
+                    break;
+                case ' CP':
+                    color = ' полированний хром';
+                    break;
+                case ' MC':
+                    color = ' матовий хром';
+                    break;
+                case ' MACC':
+                    color = ' матовая бронза';
+                    break;
+                case ' MN':
+                    color = ' матовий никель';
+                    break;
+                case ' BN/SBN':
+                    color = ' чорний никель/матовий чорний никель';
+                    break;
+                case ' PB/SB':
+                    color = ' полированая латунь/матовая латунь';
+                    break;
+                case ' SN/CP':
+                    color = ' матовий никель/полирований хром';
+                    break;
+                case ' Black/CP':
+                    color = ' чёрный/полированный хром';
+                    break;
+                case ' PCF':
+                    color = ' полирована бронза';
+                    break;
+                case ' SS':
+                    color = ' нержавеющая сталь';
+                    break;
+                case ' W':
+                    color = ' белый';
+                    break;
+                case ' S':
+                    color = ' серебрянный';
+                    break;
+                case ' B':
+                    color = ' коричневий';
+                    break;
+                default:
+                    color = "Нет таких значений";
+            }
+            csvWriter.writeRecords([{
                 'id': id,
-                'title': title,
+                'title': "Ручка на розетке MVM "+title+color,
                 'description': description.replace(/&nbsp;/g, " ").replace(/\<p\>\s{2,}/g, "<p>").replace(/\<p\>\s{1}\<\/p\>/g, ""),
                 'price': price,
                 'brand': brand,
@@ -163,32 +244,32 @@ module.exports = {
                 'unit_pricing_measure': unit_pricing_measure,
                 'end': '\n'
             }]);
+            await browser.close();
         } catch (e) {
             console.error(e);
         }
-        await browser.close();
     },
 
     getScrabProductIMG: async function (link) {
-        const browser = await puppeteer.launch({ignoreHTTPSErrors: true});
-        const page = await browser.newPage();
-        await page.setRequestInterception(true);
-        page.on("request", request => {
-            request.continue();
-        });
-        await page.emulate(devices['iPhone 6']);
-        await page.goto(link, {timeout: 0, waitUntil: "networkidle0"});
         try {
+            const browser = await puppeteer.launch({ignoreHTTPSErrors: true});
+            const page = await browser.newPage();
+            await page.setRequestInterception(true);
+            page.on("request", request => {
+                request.continue();
+            });
+            await page.emulate(devices['iPhone 6']);
+            await page.goto(link, {timeout: 0, waitUntil: "networkidle0"});
             await page.waitForSelector('div.productBody div.img_box a img');
             let img = await page.$eval('div.productBody div.img_box a img', (img) => {
                 console.log(img);
                 return img.src
             });
+            await browser.close();
             return img;
         } catch (e) {
             console.error(e);
         }
-        await browser.close();
     },
 
     generateSequence: function* (link, end) {
@@ -228,79 +309,16 @@ module.exports = {
         }
     },
 
-    getMVMcolor: function (str) {
-        switch (str) {
-            case ' MAB':
-                return ' матова антична бронза';
-                break;
-            case ' SN':
-                return ' матовий никель';
-                break;
-            case ' AB':
-                return ' стара бронза';
-                break;
-            case ' PB':
-                return ' полированная латунь';
-                break;
-            case ' SB':
-                return ' матовая латунь';
-                break;
-            case ' SN':
-                return ' матовий никель';
-                break;
-            case ' CP':
-                return ' полированний хром';
-                break;
-            case ' MC':
-                return ' матовий хром';
-                break;
-            case ' MACC':
-                return ' матовая бронза';
-                break;
-            case ' MN':
-                return ' матовий никель';
-                break;
-            case ' BN/SBN':
-                return ' чорний никель/матовий чорний никель';
-                break;
-            case ' PB/SB':
-                return ' полированая латунь/матовая латунь';
-                break;
-            case ' SN/CP':
-                return ' матовий никель/полирований хром';
-                break;
-            case ' Black/CP':
-                return ' чёрный/полированный хром';
-                break;
-            case ' PCF':
-                return ' полирована бронза';
-            case ' SS':
-                return ' нержавеющая сталь';
-                break;
-            case ' W':
-                return ' белый';
-                break;
-            case ' S':
-                return ' серебрянный';
-                break;
-            case ' B':
-                return ' коричневий';
-                break;
-            default:
-                return "Нет таких значений";
-        }
-    },
-
     sleep: async function (ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     },
 
     clearDir: function (directory = 0, file = 0) {
-        if (file != 0 && fs.existsSync(file)) {
+        if (file !== 0 && fs.existsSync(file)) {
             fs.unlink(file, err => {
                 if (err) throw err;
             });
-        } else if(directory != 0) {
+        } else if(directory !== 0) {
             fs.readdir(directory, (err, files) => {
                 if (err) throw err;
                 for (const file of files) {
