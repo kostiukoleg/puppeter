@@ -113,5 +113,5 @@ const asyncGrubber = async function (element) {
     }
 }
 
-let newItem = items.slice(0,10);
-lib.asyncForEach(newItem, asyncGrubber);
+//let newItem = items.slice(0,10);
+lib.asyncForEach(items, asyncGrubber);
