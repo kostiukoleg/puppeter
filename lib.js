@@ -128,7 +128,9 @@ module.exports = {
                 request.continue();
             });
             await page.emulate(devices['iPhone 6']);
-            await page.goto(link, {timeout: 0, waitUntil: "networkidle0"});
+            await page.goto(link, {timeout: 0, waitUntil: "networkidle0"}).catch((e)=>{
+                console.log(e);
+            });
             await page.waitForSelector('div.product-code span.code').catch((e)=>{
                 console.log(e);
             });
@@ -165,11 +167,13 @@ module.exports = {
             let condition = 'new';
             let url = link;
             let availability = 'in stock';
-            await page.goto("https://www.solo-dveri.ua/index.php?route=product/search&search="+encodeURI(title.replace("-", " ")), {timeout: 0, waitUntil: "networkidle0"});
-            await page.waitForSelector('div.image a img').catch((e)=>{
+            await page.goto("https://www.zamochniki.com.ua/search-engine.htm?slovo="+encodeURI(title)+"&search_submit=&hledatjak=2", {timeout: 0, waitUntil: "networkidle0"}).catch((e)=>{
+                console.log(e);
+            });
+            await page.waitForSelector('div.productBody div.img_box a img').catch((e)=>{
                // console.log(e);
             });
-            let image_link = await page.$eval('div.image a img', (img) => {
+            let image_link = await page.$eval('div.productBody div.img_box a img', (img) => {
                 return img.src
             }).catch((e)=>{
                 //console.log(e);
@@ -178,7 +182,9 @@ module.exports = {
                 image_link = '';
             }
             let unit_pricing_measure = 'ct';
-            let color = title.match(/\s{1}\S+/gi);
+            let color = title.match(/\s{1}\S+/gi).catch((e)=>{
+                console.log(e);
+            });
             switch (color[0]) {
                 case ' MAB':
                     color = ' матова антична бронза';
@@ -240,7 +246,7 @@ module.exports = {
             csvWriter.writeRecords([{
                 'id': id,
                 'title': "Ручка на розетке MVM "+title+color,
-                'description': description.replace(/&nbsp;/g, " ").replace(/\<p\>\s{2,}/g, "<p>").replace(/\<p\>\s{1}\<\/p\>/g, ""),
+                'description': description.replace(/&nbsp;/g, " ").replace(/\<p\>\s{2,}/g, "<p>").replace(/\<p\>\s{1}\<\/p\>/g, "").replace(/<[^>]*>?/gm, '').replace(/\S{1,}(Ручка)\s?/gm, 'Ручка'),
                 'price': price,
                 'brand': brand,
                 'condition': condition,

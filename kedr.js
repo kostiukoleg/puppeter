@@ -51,7 +51,10 @@ const asyncGrubber = async function (element) {
             request.continue();
         });
         await page.emulate(devices['iPad Pro']);
-        await page.goto('https://prom.ua/ua/search?search_term=' + encodeURI(element.name)).catch((e)=>{
+        let search = element.name;
+        search = search.replace(/KEDR\s+|.?CLASS\s+/gm, '');
+        search = search.replace(/\s?\([0-9a-zA-Z\sа-яА-Я.]+\)\s?/gm, '');
+        await page.goto('https://prom.ua/ua/search?search_term=' + encodeURI(search)).catch((e)=>{
                 console.log(e);
             });
         await page.waitForSelector('div.productTile__content--2UlvD a.productTile__tileLink--204An').catch((e)=>{
