@@ -27,18 +27,27 @@ const csvWriter = createCsvWriter({
     flags: 'a',
     mode: '0744'
 });
-module.exports = {
 
-    download: async function (uri, filename, callback) {
-        request.head(uri, function (err, res) {
-            if (err) console.log(err);
-            console.log('content-type:', res.headers['content-type']);
-            console.log('content-length:', res.headers['content-length']);
-            return request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+    async function download (uri, filename, callback) {
+        request.head(uri, function(err, res, body){
+            if (err) callback(err, filename);
+            else {
+                var stream = request(uri);
+                stream.pipe(
+                    fs.createWriteStream(filename)
+                        .on('error', function(err){
+                            callback(error, filename);
+                            stream.read();
+                        })
+                )
+                    .on('close', function() {
+                        callback(null, filename);
+                    });
+            }
         });
-    },
+    }
 
-    rusToLatin: function (str) {
+    function rusToLatin (str) {
 
         let ru = {
             'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd',
@@ -47,7 +56,7 @@ module.exports = {
             'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
             'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh',
             'щ': 'shch', 'ы': 'y', 'э': 'e', 'ю': 'u', 'я': 'ya',
-            ' ': '-', '.': '_', '*': '_'
+            ' ': '-', '*': '_'
         }, n_str = [];
 
         str = str.replace(/[ъь]+/g, '').replace(/й/g, 'i');
@@ -63,9 +72,9 @@ module.exports = {
         }
 
         return n_str.join('');
-    },
+    }
 
-    getPriceItem: function () {
+    function getPriceItem () {
         let dollar = 24.27 + (24.27 * 0.3),
             item = {},
             arr = [];
@@ -84,9 +93,9 @@ module.exports = {
             }
         }
         return arr;
-    },
+    }
 
-    getScrabLinks: async function (link, index = 1) {
+    async function getScrabLinks (link, index = 1) {
         try {
             const browser = await puppeteer.launch({ignoreHTTPSErrors: true});
             const page = await browser.newPage();
@@ -118,8 +127,34 @@ module.exports = {
         } catch (e) {
             console.log(e);
         }
-    },
-    getScrabProducts: async (link) => {
+    }
+
+    async function getNewStyleLinks (link) {
+        try {
+            const browser = await puppeteer.launch({ignoreHTTPSErrors: true, headless: false});
+            const page = await browser.newPage();
+            await page.setRequestInterception(true);
+            page.on("request", request => {
+                request.continue();
+            });
+            await page.emulate(devices['iPad Pro landscape']);
+            await page.goto(link, {timeout: 0, waitUntil: "networkidle0"});
+            await page.waitForSelector('div.catalog-collection div.cards a.cards__img').catch((e)=>{
+                console.log(e);
+            });
+            let href = await page.$$eval('div.catalog-collection div.cards a.cards__img', href => {
+                return href.map(item => item.href)
+            }).catch((e)=>{
+                console.log(e);
+            });
+            await browser.close();
+            return href;
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    async function getScrabProducts (link) {
         try {
             const browser = await puppeteer.launch({ignoreHTTPSErrors: true, headless: false});
             const page = await browser.newPage();
@@ -260,9 +295,106 @@ module.exports = {
         } catch (e) {
             console.error(e);
         }
-    },
+    }
 
-    getScrabProductIMG: async function (link) {
+     async function getScrabNsProducts (link) {
+        try {
+            const browser = await puppeteer.launch({ignoreHTTPSErrors: true, headless: true});
+            const page = await browser.newPage();
+            await page.setRequestInterception(true);
+            page.on("request", request => {
+                request.continue();
+            });
+            await page.emulate(devices['iPad Pro landscape']);
+            await page.goto(link, {timeout: 0, waitUntil: "networkidle0"}).catch((e)=>{
+                console.log(e);
+            });
+            await page.waitForSelector('div.path-page a.path-page__link').catch((e)=>{
+                console.log(e);
+            });
+            let category = await page.$$eval('div.path-page a.path-page__link', (text) => {
+                return text.map(item => item.innerText);
+            }).catch((e)=>{
+                console.log(e);
+            });
+            await page.waitForSelector('h2.title-section').catch((e)=>{
+                console.log(e);
+            });
+            let title = await page.$eval('h2.title-section', (text) => {
+                return text.innerText
+            }).catch((e)=>{
+                console.log(e);
+            });
+            await page.waitForSelector('div.open-model__desc div.open-model__group-info>p').catch((e)=>{
+                console.log(e);
+            });
+            let description = await page.$eval('div.open-model__desc div.open-model__group-info>p', (text) => {
+                return text.innerHTML
+            }).catch((e)=>{
+                console.log(e);
+            });
+            await page.waitForSelector('div.open-model__info div.product_desc>p').catch((e)=>{
+                console.log(e);
+            });
+            let description2 = await page.$eval('div.open-model__info div.product_desc>p', (text) => {
+                return text.innerHTML
+            }).catch((e)=>{
+                console.log(e);
+            });
+            await page.waitForSelector('div.model-slider-nav__item[role="option"] a').catch((e)=>{
+               console.log(e);
+            });
+            let image_links = await page.$$eval('div.model-slider-nav__item[role="option"] a', href => {
+                return href.map(item => item.href)
+            }).catch((e)=>{
+                console.log(e);
+            });
+            if(!image_links){
+                image_links = '';
+            }
+            const src = image_links.map(function(item){
+                download(item, "img/"+rusToLatin(decodeURI(item.match(/[a-zA-z%\-0-9]+.{1}[jpgJPGpngPNGgifGIF]{3}/)[0].replace( /%20\+/g, "_" ))), function(err, fileName){
+                    if (err) console.log(err);
+                });
+                return rusToLatin(decodeURI(item.match(/[a-zA-z%\-0-9]+.{1}[jpgJPGpngPNGgifGIF]{3}/)[0].replace( /%20\+/g, "_" )))+"[:param:][alt="+decodeURI(item.match(/[a-zA-z%\-0-9]+.{1}[jpgJPGpngPNGgifGIF]{3}/)[0].replace( /%20\+/g, " " ).replace( /.{1}[jpgJPGpngPNGgifGIF]{3}/g, "" ).replace( /-/g, " " ))+"][title="+decodeURI(item.match(/[a-zA-z%\-0-9]+.{1}[jpgJPGpngPNGgifGIF]{3}/)[0].replace( /%20\+/g, " " ).replace( /.{1}[jpgJPGpngPNGgifGIF]{3}/g, "" ).replace( /-/g, " " ))+"]";
+            });
+            let data = {
+                'cat': 'Межкомнатные двери/Новый стиль/' +category[2],
+                'url_cat': 'interior-doors/new-style/'+rusToLatin(category[2].replace( /[“”]/g, "" )),
+                'goods': title.replace( /[“”]/g, "" ),
+                'variant': null,
+                'description': "<p>"+description+"</p><p>"+description2+"</p>",
+                'price': null,
+                'url': null,
+                'image': src.join('|'),
+                'article': null,
+                'quantity': -1,
+                'activity': 1,
+                'title_seo': null,
+                'keys_seo': null,
+                'description_seo': null,
+                'old_price': null,
+                'recommended': 0,
+                'new': 0,
+                'sort': null,
+                'weight': 0,
+                'bined_article': null,
+                'similar_cat': null,
+                'url_goods': null,
+                'currency': 'UAH',
+                'property': null,
+                'end': '\n'
+            };
+            csvWriter.writeRecords([data]).then(()=> console.log('The CSV file was written successfully')).catch((e)=>{
+                console.log(e);
+            });
+            await browser.close();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function getScrabProductIMG (link) {
         try {
             const browser = await puppeteer.launch({ignoreHTTPSErrors: true});
             const page = await browser.newPage();
@@ -282,9 +414,9 @@ module.exports = {
         } catch (e) {
             console.error(e);
         }
-    },
+    }
 
-    generateSequence: function* (link, end) {
+    function* generateSequence (link, end) {
         for (let i = 1; i <= end; i++) {
             let subData = this.getScrabData(link, i);
             yield subData.then(function (value) {
@@ -295,20 +427,20 @@ module.exports = {
                 console.log(e);
             });
         }
-    },
+    }
 
-    getData: async function (arr) {
+    async function getData (arr) {
         return await Promise.all(arr.map(item => this.getScrabProducts(item)));
-    },
+    }
 
-    asyncForEach: async function (array, callback) {
+    async function asyncForEach (array, callback) {
         for (let index = 0; index < array.length; index++) {
             await callback(array[index], index, array);
             console.log(index);
         }
-    },
+    }
 
-    asyncForEachAll: async function (array, callback) {
+    async function asyncForEachAll (array, callback) {
         let index = 0;
         while (index < array.length) {
             let newArr = array.slice(index, index + 10);
@@ -319,13 +451,13 @@ module.exports = {
             index += 10;
             await this.sleep(3000);
         }
-    },
+    }
 
-    sleep: async function (ms) {
+    async function sleep (ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
-    },
+    }
 
-    clearDir: function (directory = 0, file = 0) {
+    function clearDir (directory = 0, file = 0) {
         if (file !== 0 && fs.existsSync(file)) {
             fs.unlink(file, err => {
                 if (err) throw err;
@@ -341,4 +473,4 @@ module.exports = {
             });
         }
     }
-}
+module.exports = {download, rusToLatin, getPriceItem, getScrabLinks, getNewStyleLinks, getScrabProducts, getScrabNsProducts, getScrabProductIMG, generateSequence, getData, asyncForEach, asyncForEachAll, sleep, clearDir};
