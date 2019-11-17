@@ -11,6 +11,7 @@ lib.clearDir(0, 'data.csv');
     await MongoClient.connect(mongo, {useUnifiedTopology: true}, function(err, db) {
         if (err) throw err;
         let dbo = db.db("newStylelinks");
+        dbo.collection("links").drop();
         let myobj = Object.assign({}, links);
         dbo.collection("links").insertOne(myobj, function(err) {
             if (err) throw err;
