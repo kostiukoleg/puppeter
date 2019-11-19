@@ -4,18 +4,11 @@ function allCheck() {
         if((F.elements[i].name.indexOf("downl") == 0 ) && (F.elements[i].type.toLowerCase() == "checkbox")){
            return F.elements[i].checked = true;
         }
-	}
+    }
 }
 var href = document.location.href;
 
 // Google 
-if (!(/\.(js|css|xml|rss|pdf)$/.test(href)) &&
-	 ( /^http[s]?:\/\/[^.]*\.(worktool.vifp)\.[a-z\.]+\//.test(href) )) 
-	 {
-
-		
-		if ((href.match(/^http:\/\/[^\/]+\/$/i) || href.match(/^http:\/\/[^\/]+\/(show_orders_files)/i))) 
-		{
-			allCheck();
-		}
-	}
+if (!(/\.(js|css|xml|rss|pdf)$/.test(href)) && ( /^http[s]?:\/\/[^.]*\.(worktool.vifp)\.[a-z\.]+\//.test(href) )) {
+	allCheck();
+}
