@@ -167,10 +167,10 @@ const asyncGrubber = async function (element, index) {
                         'similar_cat': null,
                         'url_goods': null,
                         'currency': 'UAH',
-                        'property': (color !== '') ? 'Тип='+element.category.replace( /[“”]/g, "" )+'&Страна-производитель товара=Фабричный Китай&Цвет покрытия='+color+'&Производитель=[type=assortmentCheckBox value=Кедр product_margin=Милано|Новый Стиль|Стеко|Арма|Апекс|Века|Омис|Кроноспан|Tower Floor|Кедр|Брама|НДС Двери|Marley|Agata Stal|Tikkurila]' : 'Тип='+element.category.replace( /[“”]/g, "" )+'&Страна-производитель товара=Фабричный Китай&Производитель=[type=assortmentCheckBox value=Кедр product_margin=Милано|Новый Стиль|Стеко|Арма|Апекс|Века|Омис|Кроноспан|Tower Floor|Кедр|Брама|НДС Двери|Marley|Agata Stal|Tikkurila]',
+                        'property': (color !== '' | color == 'null') ? 'Тип='+element.category.replace( /[“”]/g, "" )+'&Страна-производитель товара=Фабричный Китай&Цвет покрытия='+color+'&Производитель=[type=assortmentCheckBox value=Кедр product_margin=Милано|Новый Стиль|Стеко|Арма|Апекс|Века|Омис|Кроноспан|Tower Floor|Кедр|Брама|НДС Двери|Marley|Agata Stal|Tikkurila]' : 'Тип='+element.category.replace( /[“”]/g, "" )+'&Страна-производитель товара=Фабричный Китай&Производитель=[type=assortmentCheckBox value=Кедр product_margin=Милано|Новый Стиль|Стеко|Арма|Апекс|Века|Омис|Кроноспан|Tower Floor|Кедр|Брама|НДС Двери|Marley|Agata Stal|Tikkurila]',
                         'end': '\n'
                     };
-                    csvWriter.writeRecords([data]).catch((e)=>{//.then(()=> console.log('The CSV file was written successfully'))
+                    csvWriter.writeRecords([data]).then(()=> console.log(index)).catch((e)=>{//.then(()=> console.log('The CSV file was written successfully'))
                             console.log(e.message);
                         });
         }).catch((e)=>{
@@ -182,5 +182,5 @@ const asyncGrubber = async function (element, index) {
     }
 }
 
-let newItem = items.slice(50,100);
+let newItem = items.slice(100,150);
 lib.asyncForEach(newItem, asyncGrubber);
